@@ -3,7 +3,7 @@
   "host": "chat.buytem.cn",
   "name": "Chat App",
   "launcherName": "Chat",
-  "themeColor": "#FFFFFF",
+  "themeColor": "#FFFFF0",
   "navigationColor": "#000000",
   "backgroundColor": "#FFFFFF",
   "enableNotifications": true,
