@@ -1,0 +1,72 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  release:
+    types: [ published ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: Build APK with Bubblewrap
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install Bubblewrap
+      run: |
+        npm install -g @bubblewrap/cli
+        bubblewrap --version
+        
+    - name: Initialize TWA project
+      run: |
+        bubblewrap init --manifest=https://chat.buytem.cn/manifest.json --directory=./twa-build
+      continue-on-error: true
+      
+    - name: Build APK
+      run: |
+        # 如果上一步失败，使用我们的manifest文件
+        if [ ! -d "./twa-build" ]; then
+          mkdir -p twa-build
+          cp twa-manifest.json twa-build/twa-manifest.json
+          cd twa-build
+          bubblewrap build --generateAppBundle=false
+        else
+          cd twa-build
+          bubblewrap build --generateAppBundle=false
+        fi
+        
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chat-app-apk
+        path: twa-build/app-release.apk
+        retention-days: 30
+        
+    - name: Upload APK to release
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./twa-build/app-release.apk
+        asset_name: chat-app-${{ github.event.release.tag_name }}.apk
+        asset_content_type: application/vnd.android.package-archive
